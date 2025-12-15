@@ -385,4 +385,68 @@ class AdamLite12dofRobot(LeggedRobot):
                 self.extras["episode"] = {}
             self.extras["episode"]["push_vel_xy"] = self.push_vel_xy
 
+    # def _process_dof_props(self, props, env_id):
+    #     """Callback allowing to store/change/randomize the DOF properties of each environment.
+    #         Called During environment creation.
+    #         Base behavior: stores position, velocity and torques limits defined in the URDF
 
+    #     Args:
+    #         props (numpy.array): Properties of each DOF of the asset
+    #         env_id (int): Environment id
+
+    #     Returns:
+    #         [numpy.array]: Modified DOF properties
+    #     """
+    #     if env_id == 0:
+    #         self.dof_pos_limits = torch.zeros(
+    #             self.num_dof,
+    #             2,
+    #             dtype=torch.float,
+    #             device=self.device,
+    #             requires_grad=False,
+    #         )
+    #         self.dof_vel_limits = torch.zeros(
+    #             self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
+    #         )
+    #         self.torque_limits = torch.zeros(
+    #             self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
+    #         )
+    #         for i in range(len(props)):
+    #             self.dof_pos_limits[i, 0] = (
+    #                 props["lower"][i].item() * self.cfg.safety.pos_limit
+    #             )
+    #             self.dof_pos_limits[i, 1] = (
+    #                 props["upper"][i].item() * self.cfg.safety.pos_limit
+    #             )
+    #             self.dof_vel_limits[i] = (
+    #                 props["velocity"][i].item() * self.cfg.safety.vel_limit
+    #             )
+    #             self.torque_limits[i] = (
+    #                 props["effort"][i].item() * self.cfg.safety.torque_limit
+    #             )
+    #     return props
+    
+    def _reward_feet_distance(self):
+        """
+        Calculates the reward based on the distance between the feet. Penalize feet get close to each other or too far away.
+        """
+        foot_pos = self.rigid_state[:, self.feet_indices, :2]
+        foot_dist = torch.norm(foot_pos[:, 0, :] - foot_pos[:, 1, :], dim=1)
+        fd = self.cfg.rewards.min_dist
+        max_df = self.cfg.rewards.max_dist
+        d_min = torch.clamp(foot_dist - fd, -0.5, 0.0)
+        d_max = torch.clamp(foot_dist - max_df, 0.0, 0.5)
+        return (
+            torch.exp(-torch.abs(d_min) * 100) + torch.exp(-torch.abs(d_max) * 100)
+        ) / 2
+    
+    def _reward_orientation(self):
+        """
+        Calculates the reward for maintaining a flat base orientation. It penalizes deviation
+        from the desired base orientation using the base euler angles and the projected gravity vector.
+        """
+        quat_mismatch = torch.exp(
+            -torch.sum(torch.abs(self.base_euler_xyz[:, :2]), dim=1) * 10
+        )
+        orientation = torch.exp(-torch.norm(self.projected_gravity[:, :2], dim=1) * 20)
+        return (quat_mismatch + orientation) / 2.0

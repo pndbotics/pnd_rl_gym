@@ -24,6 +24,12 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
         num_actions = 12
         episode_length_s = 10
 
+    # class safety:
+    #     # safety factors
+    #     pos_limit = 0.9
+    #     vel_limit = 0.9
+    #     torque_limit = 0.85
+        
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True
         friction_range = [0.1, 1.25]
@@ -42,49 +48,52 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
         resampling_time = 8.0
         heading_command = False
         class ranges(LeggedRobotCfg.commands.ranges):
-            lin_vel_x = [0.0, 0.8]
+            lin_vel_x = [-0.5, 0.5]  # min max [m/s]
             lin_vel_y = [0.0, 0.0]
-            ang_vel_yaw = [-0.6, 0.6]
-            heading = [-3.14, 3.14]
+            ang_vel_yaw = [-0.4, 0.4]
+            heading = [-0.0, 0.0]
       
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
         control_type = 'P'
         # PD Drive parameters - tuned for stability and tracking
         stiffness = {
-            'hipPitch': 150,   # 230 Nm effort in URDF
-            'hipRoll': 100,    # 160 Nm effort in URDF
-            'hipYaw': 80,      # 105 Nm effort in URDF
-            'kneePitch': 180,  # 230 Nm effort in URDF
-            'anklePitch': 40,  # 40 Nm effort in URDF
-            'ankleRoll': 20,   # 12 Nm effort in URDF
+            'hipPitch': 305.0,   # 230 Nm effort in URDF
+            'hipRoll': 700.0,    # 160 Nm effort in URDF
+            'hipYaw': 405.0,      # 105 Nm effort in URDF
+            'kneePitch': 305.0,  # 230 Nm effort in URDF
+            'anklePitch': 25.0,  # 40 Nm effort in URDF
+            'ankleRoll': 0.0,   # 12 Nm effort in URDF
         }  # [N*m/rad]
         damping = {
-            'hipPitch': 3.0,
-            'hipRoll': 2.5,
-            'hipYaw': 2.0,
-            'kneePitch': 4.0,
-            'anklePitch': 2.0,
-            'ankleRoll': 1.5,
+            'hipPitch': 6.1,
+            'hipRoll': 30.0,
+            'hipYaw': 6.1,
+            'kneePitch': 6.1,
+            'anklePitch': 2.55,
+            'ankleRoll': 0.35,
         }  # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
-        action_scale = 0.22
+        action_scale = 0.25  # 0.5 corresponds to about 30 degrees range
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
 
     class asset(LeggedRobotCfg.asset):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/adam_lite/adam_lite_12dof.urdf'
+        # file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/adam_pro/adam_pro_12dof.urdf'
         name = "adam_lite_12dof"
         foot_name = "toe"  # The foot links are toeLeft and toeRight
         penalize_contacts_on = ["hip", "knee"]
-        terminate_after_contacts_on = ["pelvis", "torso"]
+        terminate_after_contacts_on = ["pelvis", "knee", "hip", "torso"]
+        penalize_contacts_on = ['pelvis', 'shin', 'shoulder', 'elbow', 'thigh', 'torso']
         self_collisions = 0  # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = True
   
     class rewards(LeggedRobotCfg.rewards):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.80  # Target height for pelvis
-        
+        min_dist = 0.2
+        max_dist = 0.5
         class scales(LeggedRobotCfg.rewards.scales):
             # Velocity Tracking
             tracking_lin_vel = 1.0      # Track commanded linear velocity
@@ -109,7 +118,10 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             feet_swing_height = -30.0   # Ensure proper swing clearance
             contact = 1.0               # Reward foot contact配合实现相位同步）
             contact_no_vel = -0.1       # Penalize foot contact while moving
-            
+            feet_distance = 0.25       # Penalize feet getting too close or too far away
+            orientation = 1.0
+
+            action_smoothness = -0.0005    # Encourage smooth actions
             # Symmetry & Gait Quality
             feet_lateral_deviation = -5.0  # Keep feet pointing forward
             
@@ -143,8 +155,8 @@ class AdamLite12dofRoughCfgPPO(LeggedRobotCfgPPO):
     
     class runner(LeggedRobotCfgPPO.runner):
         policy_class_name = "ActorCriticRecurrent"
-        max_iterations = 5000
-        run_name = ''
+        max_iterations = 6000
+        run_name = 'action_smooth'
         experiment_name = 'adam_lite_12dof'
         num_steps_per_env = 32
         
