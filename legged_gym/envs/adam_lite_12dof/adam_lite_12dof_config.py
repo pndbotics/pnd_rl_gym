@@ -2,7 +2,23 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 
 class AdamLite12dofRoughCfg(LeggedRobotCfg):
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.85]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.95]  # x,y,z [m]
+        # default_joint_angles = {  # = target angles [rad] when action = 0.0
+        #     'hipPitch_Left': -0.32,     #0
+        #     'hipRoll_Left': 0.0,        #1
+        #     'hipYaw_Left': -0.18,       #2
+        #     'kneePitch_Left': 0.66,     #3
+        #     'anklePitch_Left': -0.29,   #4
+        #     'ankleRoll_Left': -0.0,     #5
+
+        #     'hipPitch_Right': -0.32,    #6
+        #     'hipRoll_Right': -0.,       #7
+        #     'hipYaw_Right': 0.18,       #8
+        #     'kneePitch_Right': 0.66,    #9
+        #     'anklePitch_Right': -0.29,  #10
+        #     'ankleRoll_Right': 0.0,     #11
+        # }
+
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             'hipPitch_Left': -0.1,
             'hipRoll_Left': 0,
@@ -17,42 +33,32 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             'anklePitch_Right': -0.2,
             'ankleRoll_Right': 0,
         }
-    
+
     class env(LeggedRobotCfg.env):
         num_observations = 47
         num_privileged_obs = 50
         num_actions = 12
         episode_length_s = 10
-
-    # class safety:
-    #     # safety factors
-    #     pos_limit = 0.9
-    #     vel_limit = 0.9
-    #     torque_limit = 0.85
         
+    class safety:
+        # safety factors
+        pos_limit = 0.9
+        vel_limit = 0.9
+        torque_limit = 0.85
+    
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True
-        friction_range = [0.1, 1.25]
+        friction_range = [0.1, 2.0]
         randomize_base_mass = True
-        added_mass_range = [-0.5, 0.5]
+        added_mass_range = [-0.05, 0.05]
         push_robots = True  # Enable robot pushing for disturbance training
         push_interval_s = 5
-        max_push_vel_xy = 1.5
+        max_push_vel_xy = 0.2
         # Curriculum learning for push_robots
         curriculum = True  # Enable curriculum learning for push disturbances
-        max_push_vel_xy_curriculum = 1.5  # Maximum push velocity to reach through curriculum
+        max_push_vel_xy_curriculum = 0.5  # Maximum push velocity to reach through curriculum
         initial_push_vel_xy = 0.0  # Initial push velocity (easier at start)
 
-    class commands(LeggedRobotCfg.commands):
-        curriculum = True
-        resampling_time = 8.0
-        heading_command = False
-        class ranges(LeggedRobotCfg.commands.ranges):
-            lin_vel_x = [-0.5, 0.5]  # min max [m/s]
-            lin_vel_y = [0.0, 0.0]
-            ang_vel_yaw = [-0.4, 0.4]
-            heading = [-0.0, 0.0]
-      
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
         control_type = 'P'
@@ -91,7 +97,7 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
   
     class rewards(LeggedRobotCfg.rewards):
         soft_dof_pos_limit = 0.9
-        base_height_target = 0.80  # Target height for pelvis
+        base_height_target = 0.9  # Target height for pelvis
         min_dist = 0.2
         max_dist = 0.5
         class scales(LeggedRobotCfg.rewards.scales):
@@ -102,14 +108,13 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             ang_vel_xy = -0.05          # Penalize roll/pitch angular velocity
             
             # Pose Stability
-            orientation = -0.5          # Keep body level (penalize roll/pitch)
-            base_height = -3.0          # Maintain target height
+            base_height = -2.0          # Maintain target height
             
             # Joint Control
             dof_acc = -2.5e-7           # Penalize joint accelerations
             dof_vel = -1e-3             # Penalize high joint velocities
             dof_pos_limits = -5.0       # Penalize approaching joint limits
-            hip_pos = -0.5              # Regularize hip positions
+            # hip_pos = -0.5              # Regularize hip positions
             ankle_pos = -1.0            # Keep ankles stable (fix toe-up & roll issues)
             action_rate = -0.01         # Smooth actions (penalize rapid changes)
             
@@ -118,10 +123,10 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             feet_swing_height = -30.0   # Ensure proper swing clearance
             contact = 1.0               # Reward foot contact配合实现相位同步）
             contact_no_vel = -0.1       # Penalize foot contact while moving
-            feet_distance = 0.25       # Penalize feet getting too close or too far away
+            feet_distance = 1.5       # Penalize feet getting too close or too far away
             orientation = 1.0
 
-            action_smoothness = -0.0005    # Encourage smooth actions
+            action_smoothness = -0.01    # Encourage smooth actions
             # Symmetry & Gait Quality
             feet_lateral_deviation = -5.0  # Keep feet pointing forward
             
@@ -135,7 +140,7 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
 
 class AdamLite12dofRoughCfgPPO(LeggedRobotCfgPPO):
     class policy:
-        init_noise_std = 1.0
+        init_noise_std = 0.5
         actor_hidden_dims = [128, 64]
         critic_hidden_dims = [128, 64]
         activation = 'elu'  # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
@@ -145,18 +150,18 @@ class AdamLite12dofRoughCfgPPO(LeggedRobotCfgPPO):
         rnn_num_layers = 1
         
     class algorithm(LeggedRobotCfgPPO.algorithm):
-        entropy_coef = 0.02
-        learning_rate = 8.e-4
+        entropy_coef = 0.01
+        learning_rate = 1.e-3
         schedule = 'adaptive'
-        num_learning_epochs = 3
-        num_mini_batches = 8
-        desired_kl = 0.006
-        clip_param = 0.15
+        num_learning_epochs = 5
+        num_mini_batches = 4
+        desired_kl = 0.01
+        clip_param = 0.2
     
     class runner(LeggedRobotCfgPPO.runner):
         policy_class_name = "ActorCriticRecurrent"
         max_iterations = 6000
-        run_name = 'action_smooth'
+        run_name = 'action_scale_0.25_high_pos_terrian'
         experiment_name = 'adam_lite_12dof'
         num_steps_per_env = 32
         

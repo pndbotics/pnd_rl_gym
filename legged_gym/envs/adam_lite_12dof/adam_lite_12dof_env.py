@@ -385,46 +385,46 @@ class AdamLite12dofRobot(LeggedRobot):
                 self.extras["episode"] = {}
             self.extras["episode"]["push_vel_xy"] = self.push_vel_xy
 
-    # def _process_dof_props(self, props, env_id):
-    #     """Callback allowing to store/change/randomize the DOF properties of each environment.
-    #         Called During environment creation.
-    #         Base behavior: stores position, velocity and torques limits defined in the URDF
+    def _process_dof_props(self, props, env_id):
+        """Callback allowing to store/change/randomize the DOF properties of each environment.
+            Called During environment creation.
+            Base behavior: stores position, velocity and torques limits defined in the URDF
 
-    #     Args:
-    #         props (numpy.array): Properties of each DOF of the asset
-    #         env_id (int): Environment id
+        Args:
+            props (numpy.array): Properties of each DOF of the asset
+            env_id (int): Environment id
 
-    #     Returns:
-    #         [numpy.array]: Modified DOF properties
-    #     """
-    #     if env_id == 0:
-    #         self.dof_pos_limits = torch.zeros(
-    #             self.num_dof,
-    #             2,
-    #             dtype=torch.float,
-    #             device=self.device,
-    #             requires_grad=False,
-    #         )
-    #         self.dof_vel_limits = torch.zeros(
-    #             self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
-    #         )
-    #         self.torque_limits = torch.zeros(
-    #             self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
-    #         )
-    #         for i in range(len(props)):
-    #             self.dof_pos_limits[i, 0] = (
-    #                 props["lower"][i].item() * self.cfg.safety.pos_limit
-    #             )
-    #             self.dof_pos_limits[i, 1] = (
-    #                 props["upper"][i].item() * self.cfg.safety.pos_limit
-    #             )
-    #             self.dof_vel_limits[i] = (
-    #                 props["velocity"][i].item() * self.cfg.safety.vel_limit
-    #             )
-    #             self.torque_limits[i] = (
-    #                 props["effort"][i].item() * self.cfg.safety.torque_limit
-    #             )
-    #     return props
+        Returns:
+            [numpy.array]: Modified DOF properties
+        """
+        if env_id == 0:
+            self.dof_pos_limits = torch.zeros(
+                self.num_dof,
+                2,
+                dtype=torch.float,
+                device=self.device,
+                requires_grad=False,
+            )
+            self.dof_vel_limits = torch.zeros(
+                self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
+            )
+            self.torque_limits = torch.zeros(
+                self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
+            )
+            for i in range(len(props)):
+                self.dof_pos_limits[i, 0] = (
+                    props["lower"][i].item() * self.cfg.safety.pos_limit
+                )
+                self.dof_pos_limits[i, 1] = (
+                    props["upper"][i].item() * self.cfg.safety.pos_limit
+                )
+                self.dof_vel_limits[i] = (
+                    props["velocity"][i].item() * self.cfg.safety.vel_limit
+                )
+                self.torque_limits[i] = (
+                    props["effort"][i].item() * self.cfg.safety.torque_limit
+                )
+        return props
     
     def _reward_feet_distance(self):
         """
