@@ -90,11 +90,10 @@ class Terrain:
         gap_size = 1. * difficulty
         pit_depth = 1. * difficulty
         if choice < self.proportions[0]:
-            if choice < self.proportions[0]/ 2:
-                slope *= -1
-            terrain_utils.pyramid_sloped_terrain(terrain, slope=slope, platform_size=3.)
+            # Flat terrain: keep height_field_raw as zero (already initialized to 0)
+            pass
         elif choice < self.proportions[1]:
-            terrain_utils.pyramid_sloped_terrain(terrain, slope=slope, platform_size=3.)
+            # Rough terrain: flat base with random uniform noise
             terrain_utils.random_uniform_terrain(terrain, min_height=-0.05, max_height=0.05, step=0.005, downsampled_scale=0.2)
         elif choice < self.proportions[3]:
             if choice<self.proportions[2]:

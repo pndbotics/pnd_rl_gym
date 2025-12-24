@@ -2,7 +2,7 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 
 class AdamLite12dofRoughCfg(LeggedRobotCfg):
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.95]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.92]  # x,y,z [m]
         # default_joint_angles = {  # = target angles [rad] when action = 0.0
         #     'hipPitch_Left': -0.32,     #0
         #     'hipRoll_Left': 0.0,        #1
@@ -23,14 +23,14 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             'hipPitch_Left': -0.1,
             'hipRoll_Left': 0,
             'hipYaw_Left': 0.,
-            'kneePitch_Left': 0.3,
-            'anklePitch_Left': -0.2,
+            'kneePitch_Left': 0.35,
+            'anklePitch_Left': -0.25,
             'ankleRoll_Left': 0,
             'hipPitch_Right': -0.1,
             'hipRoll_Right': 0,
             'hipYaw_Right': 0.,
-            'kneePitch_Right': 0.3,
-            'anklePitch_Right': -0.2,
+            'kneePitch_Right': 0.35,
+            'anklePitch_Right': -0.25,
             'ankleRoll_Right': 0,
         }
 
@@ -39,13 +39,25 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
         num_privileged_obs = 50
         num_actions = 12
         episode_length_s = 10
-        
+
+    class commands:
+        curriculum = False
+        max_curriculum = 1.
+        num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
+        resampling_time = 8. # time before command are changed[s]
+        heading_command = True # if true: compute ang vel command from heading error
+        class ranges:
+            lin_vel_x = [-0.5, 0.8] # min max [m/s]
+            lin_vel_y = [-0.3, 0.3]   # min max [m/s]
+            ang_vel_yaw = [-0.4, 0.4]    # min max [rad/s]
+            heading = [-0.0, 0.0]
+
     class safety:
         # safety factors
         pos_limit = 0.9
         vel_limit = 0.9
         torque_limit = 0.85
-    
+
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True
         friction_range = [0.1, 2.0]
@@ -80,7 +92,7 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             'ankleRoll': 0.35,
         }  # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
-        action_scale = 0.25  # 0.5 corresponds to about 30 degrees range
+        action_scale = 0.5  # 0.5 corresponds to about 30 degrees range
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
 
@@ -97,7 +109,7 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
   
     class rewards(LeggedRobotCfg.rewards):
         soft_dof_pos_limit = 0.9
-        base_height_target = 0.9  # Target height for pelvis
+        base_height_target = 0.88  # Target height for pelvis
         min_dist = 0.2
         max_dist = 0.5
         class scales(LeggedRobotCfg.rewards.scales):
@@ -108,13 +120,13 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             ang_vel_xy = -0.05          # Penalize roll/pitch angular velocity
             
             # Pose Stability
-            base_height = -2.0          # Maintain target height
+            base_height = -3.0          # Maintain target height
             
             # Joint Control
             dof_acc = -2.5e-7           # Penalize joint accelerations
             dof_vel = -1e-3             # Penalize high joint velocities
             dof_pos_limits = -5.0       # Penalize approaching joint limits
-            # hip_pos = -0.5              # Regularize hip positions
+            hip_pos = -0.5              # Regularize hip positions
             ankle_pos = -1.0            # Keep ankles stable (fix toe-up & roll issues)
             action_rate = -0.01         # Smooth actions (penalize rapid changes)
             
@@ -140,7 +152,7 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
 
 class AdamLite12dofRoughCfgPPO(LeggedRobotCfgPPO):
     class policy:
-        init_noise_std = 0.5
+        init_noise_std = 1.0
         actor_hidden_dims = [128, 64]
         critic_hidden_dims = [128, 64]
         activation = 'elu'  # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
@@ -160,8 +172,8 @@ class AdamLite12dofRoughCfgPPO(LeggedRobotCfgPPO):
     
     class runner(LeggedRobotCfgPPO.runner):
         policy_class_name = "ActorCriticRecurrent"
-        max_iterations = 6000
-        run_name = 'action_scale_0.25_high_pos_terrian'
+        max_iterations = 5000
+        run_name = 'action_scale_0.5_high_pos'
         experiment_name = 'adam_lite_12dof'
         num_steps_per_env = 32
         
