@@ -191,7 +191,7 @@ class Controller:
         cos_phase = np.cos(2 * np.pi * phase)
 
         self.cmd[0] = self.remote_controller.get_walk_x_direction_speed()
-        self.cmd[1] = self.remote_controller.get_walk_y_direction_speed
+        self.cmd[1] = self.remote_controller.get_walk_y_direction_speed()
         self.cmd[2] = self.remote_controller.get_walk_yaw_direction_speed()
 
         num_actions = self.config.num_actions
