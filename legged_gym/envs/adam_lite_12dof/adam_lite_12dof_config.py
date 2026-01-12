@@ -3,36 +3,36 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 class AdamLite12dofRoughCfg(LeggedRobotCfg):
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.92]  # x,y,z [m]
-        # default_joint_angles = {  # = target angles [rad] when action = 0.0
-        #     'hipPitch_Left': -0.32,     #0
-        #     'hipRoll_Left': 0.0,        #1
-        #     'hipYaw_Left': -0.18,       #2
-        #     'kneePitch_Left': 0.66,     #3
-        #     'anklePitch_Left': -0.29,   #4
-        #     'ankleRoll_Left': -0.0,     #5
-
-        #     'hipPitch_Right': -0.32,    #6
-        #     'hipRoll_Right': -0.,       #7
-        #     'hipYaw_Right': 0.18,       #8
-        #     'kneePitch_Right': 0.66,    #9
-        #     'anklePitch_Right': -0.29,  #10
-        #     'ankleRoll_Right': 0.0,     #11
-        # }
-
         default_joint_angles = {  # = target angles [rad] when action = 0.0
-            'hipPitch_Left': -0.1,
-            'hipRoll_Left': 0,
-            'hipYaw_Left': 0.,
-            'kneePitch_Left': 0.35,
-            'anklePitch_Left': -0.25,
-            'ankleRoll_Left': 0,
-            'hipPitch_Right': -0.1,
-            'hipRoll_Right': 0,
-            'hipYaw_Right': 0.,
-            'kneePitch_Right': 0.35,
-            'anklePitch_Right': -0.25,
-            'ankleRoll_Right': 0,
+            'hipPitch_Left': -0.32,     #0
+            'hipRoll_Left': 0.0,        #1
+            'hipYaw_Left': -0.18,       #2
+            'kneePitch_Left': 0.66,     #3
+            'anklePitch_Left': -0.29,   #4
+            'ankleRoll_Left': -0.0,     #5
+
+            'hipPitch_Right': -0.32,    #6
+            'hipRoll_Right': -0.,       #7
+            'hipYaw_Right': 0.18,       #8
+            'kneePitch_Right': 0.66,    #9
+            'anklePitch_Right': -0.29,  #10
+            'ankleRoll_Right': 0.0,     #11
         }
+
+        # default_joint_angles = {  # = target angles [rad] when action = 0.0
+        #     'hipPitch_Left': -0.1,
+        #     'hipRoll_Left': 0,
+        #     'hipYaw_Left': 0.,
+        #     'kneePitch_Left': 0.35,
+        #     'anklePitch_Left': -0.25,
+        #     'ankleRoll_Left': 0,
+        #     'hipPitch_Right': -0.1,
+        #     'hipRoll_Right': 0,
+        #     'hipYaw_Right': 0.,
+        #     'kneePitch_Right': 0.35,
+        #     'anklePitch_Right': -0.25,
+        #     'ankleRoll_Right': 0,
+        # }
 
     class env(LeggedRobotCfg.env):
         num_observations = 47
@@ -120,18 +120,18 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             ang_vel_xy = -0.05          # Penalize roll/pitch angular velocity
             
             # Pose Stability
-            base_height = -3.0          # Maintain target height
+            base_height = -10.0          # Maintain target height
             
             # Joint Control
             dof_acc = -2.5e-7           # Penalize joint accelerations
             dof_vel = -1e-3             # Penalize high joint velocities
             dof_pos_limits = -5.0       # Penalize approaching joint limits
-            hip_pos = -0.5              # Regularize hip positions
-            ankle_pos = -1.0            # Keep ankles stable (fix toe-up & roll issues)
+            # hip_pos = -0.5              # Regularize hip positions
+            ankle_pos = -10.0            # Keep ankles stable (fix toe-up & roll issues)
             action_rate = -0.01         # Smooth actions (penalize rapid changes)
             
             # Foot Contact & Gait
-            feet_air_time = 0.05        # Small value to lift feet without jumping
+            feet_air_time = 0.1        # Small value to lift feet without jumping
             feet_swing_height = -30.0   # Ensure proper swing clearance
             contact = 1.0               # Reward foot contact配合实现相位同步）
             contact_no_vel = -0.1       # Penalize foot contact while moving
@@ -173,7 +173,7 @@ class AdamLite12dofRoughCfgPPO(LeggedRobotCfgPPO):
     class runner(LeggedRobotCfgPPO.runner):
         policy_class_name = "ActorCriticRecurrent"
         max_iterations = 5000
-        run_name = 'action_scale_0.5_high_pos'
+        run_name = 'action_scale_0.5_low_pos'
         experiment_name = 'adam_lite_12dof'
         num_steps_per_env = 32
         
