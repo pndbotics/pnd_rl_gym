@@ -2,20 +2,20 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 
 class AdamLite12dofRoughCfg(LeggedRobotCfg):
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.92]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.93]  # x,y,z [m]
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             'hipPitch_Left': -0.32,     #0
             'hipRoll_Left': 0.0,        #1
             'hipYaw_Left': -0.18,       #2
             'kneePitch_Left': 0.66,     #3
-            'anklePitch_Left': -0.29,   #4
+            'anklePitch_Left': -0.39,   #4
             'ankleRoll_Left': -0.0,     #5
 
             'hipPitch_Right': -0.32,    #6
             'hipRoll_Right': -0.,       #7
             'hipYaw_Right': 0.18,       #8
             'kneePitch_Right': 0.66,    #9
-            'anklePitch_Right': -0.29,  #10
+            'anklePitch_Right': -0.39,  #10
             'ankleRoll_Right': 0.0,     #11
         }
 
@@ -47,7 +47,7 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
         resampling_time = 8. # time before command are changed[s]
         heading_command = True # if true: compute ang vel command from heading error
         class ranges:
-            lin_vel_x = [-0.5, 0.8] # min max [m/s]
+            lin_vel_x = [-1.0, 1.0] # min max [m/s]
             lin_vel_y = [-0.3, 0.3]   # min max [m/s]
             ang_vel_yaw = [-0.4, 0.4]    # min max [rad/s]
             heading = [-0.0, 0.0]
@@ -94,7 +94,7 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.5  # 0.5 corresponds to about 30 degrees range
         # decimation: Number of control action updates @ sim DT per policy DT
-        decimation = 4
+        decimation = 5
 
     class asset(LeggedRobotCfg.asset):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/adam_lite/adam_lite_12dof.urdf'
@@ -127,7 +127,7 @@ class AdamLite12dofRoughCfg(LeggedRobotCfg):
             dof_vel = -1e-3             # Penalize high joint velocities
             dof_pos_limits = -5.0       # Penalize approaching joint limits
             # hip_pos = -0.5              # Regularize hip positions
-            ankle_pos = -10.0            # Keep ankles stable (fix toe-up & roll issues)
+            ankle_pos = -5.0            # Keep ankles stable (fix toe-up & roll issues)
             action_rate = -0.01         # Smooth actions (penalize rapid changes)
             
             # Foot Contact & Gait
