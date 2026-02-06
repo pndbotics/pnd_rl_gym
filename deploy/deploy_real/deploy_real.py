@@ -6,12 +6,13 @@ import torch
 
 from pndbotics_sdk_py.core.channel import ChannelPublisher, ChannelFactoryInitialize
 from pndbotics_sdk_py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
-from pndbotics_sdk_py.idl.default import pnd_adam_msg_dds__LowCmd_, pnd_adam_msg_dds__LowState_
+from pndbotics_sdk_py.idl.default import pnd_adam_msg_dds__LowCmd_, pnd_adam_msg_dds__LowState_, pnd_adam_msg_dds__HandCmd_
 from pndbotics_sdk_py.idl.pnd_adam.msg.dds_ import LowCmd_
 from pndbotics_sdk_py.idl.pnd_adam.msg.dds_ import LowState_ 
+from pndbotics_sdk_py.idl.pnd_adam.msg.dds_ import HandCmd_
 
 from common.command_helper import create_damping_cmd, create_zero_cmd, init_cmd_adam, MotorMode
-from common.rotation_helper import get_gravity_orientation, transform_imu_data
+from common.rotation_helper import get_gravity_orientation, transform_imu_data, ypr_to_quaternion
 from common.remote_controller import RemoteController, KeyMap
 from config import Config
 
@@ -31,31 +32,33 @@ class Controller:
         self.obs = np.zeros(config.num_obs, dtype=np.float32)
         self.cmd = np.array([0.0, 0, 0])
         self.counter = 0
-
+       
         if config.msg_type == "adam_lite":
-            self.low_cmd = pnd_adam_msg_dds__LowCmd_()
-            self.low_state = pnd_adam_msg_dds__LowState_()
-            self.mode_pr_ = MotorMode.PR
-            self.mode_machine_ = 0
-
-            self.lowcmd_publisher_ = ChannelPublisher(config.lowcmd_topic, LowCmd_)
-            self.lowcmd_publisher_.Init()
-
-            self.lowstate_subscriber = ChannelSubscriber(config.lowstate_topic, LowState_)
-            self.lowstate_subscriber.Init(self.LowState_Handler, 10)
+            self.low_cmd = pnd_adam_msg_dds__LowCmd_(23)
+            self.low_state = pnd_adam_msg_dds__LowState_(23)
+        elif config.msg_type == "adam_pro":
+            self.low_cmd = pnd_adam_msg_dds__LowCmd_(31)
+            self.low_state = pnd_adam_msg_dds__LowState_(31)
+            self.hand_cmd = pnd_adam_msg_dds__HandCmd_()
+            self.close_hand = np.array([500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500], dtype=int)
+            self.hand_pub = ChannelPublisher("rt/handcmd", HandCmd_)
+            self.hand_pub.Init()
         else:
             raise ValueError("Invalid msg_type")
+        self.mode_pr_ = MotorMode.PR
+        self.lowcmd_publisher_ = ChannelPublisher(config.lowcmd_topic, LowCmd_)
+        self.lowcmd_publisher_.Init()
+
+
+        self.lowstate_subscriber = ChannelSubscriber(config.lowstate_topic, LowState_)
+        self.lowstate_subscriber.Init(self.LowState_Handler, 10)
 
         # wait for the subscriber to receive data
         self.wait_for_low_state()
-
-        # Initialize the command msg
-        if config.msg_type == "adam_lite":
-            init_cmd_adam(self.low_cmd, self.mode_machine_, self.mode_pr_)
+        init_cmd_adam(self.low_cmd, self.mode_pr_)
 
     def LowState_Handler(self, msg: LowState_):
         self.low_state = msg
-        self.mode_machine_ = self.low_state.mode_machine
         self.remote_controller.set(self.low_state.wireless_remote)
 
     def send_cmd(self, cmd: LowCmd_):
@@ -63,6 +66,7 @@ class Controller:
 
     def wait_for_low_state(self):
         while self.low_state.tick == 0:
+            print("wait for low state")
             time.sleep(self.config.control_dt)
         print("Successfully connected to the robot.")
 
@@ -70,17 +74,19 @@ class Controller:
         print("Enter zero torque state.")
         print("Waiting for the start signal...")
         while self.remote_controller.button[KeyMap.start] != 1:
-            create_zero_cmd(self.low_cmd)
-            self.send_cmd(self.low_cmd)
+            # create_zero_cmd(self.low_cmd)
+            # self.send_cmd(self.low_cmd)
             time.sleep(self.config.control_dt)
 
     def move_to_default_pos(self):
+
         print("Moving to default pos.")
         # move time 2s
         total_time = 2
         num_step = int(total_time / self.config.control_dt)
         
         dof_idx = self.config.leg_joint2motor_idx + self.config.arm_waist_joint2motor_idx
+
         kps = self.config.kps + self.config.arm_waist_kps
         kds = self.config.kds + self.config.arm_waist_kds
         default_pos = np.concatenate((self.config.default_angles, self.config.arm_waist_target), axis=0)
@@ -102,10 +108,21 @@ class Controller:
                 self.low_cmd.motor_cmd[motor_idx].kp = kps[j]
                 self.low_cmd.motor_cmd[motor_idx].kd = kds[j]
                 self.low_cmd.motor_cmd[motor_idx].tau = 0
+
+            # hand publisher
+            if config.msg_type != "adam_lite":
+                for i in range(12):
+                    self.hand_cmd.position[i] = self.close_hand[i]
+                self.hand_pub.Write(self.hand_cmd)
+
             self.send_cmd(self.low_cmd)
             time.sleep(self.config.control_dt)
+    
+
+
 
     def default_pos_state(self):
+            
         print("Enter default pos state.")
         print("Waiting for the Button A signal...")
         while self.remote_controller.button[KeyMap.A] != 1:
@@ -123,10 +140,23 @@ class Controller:
                 self.low_cmd.motor_cmd[motor_idx].kp = self.config.arm_waist_kps[i]
                 self.low_cmd.motor_cmd[motor_idx].kd = self.config.arm_waist_kds[i]
                 self.low_cmd.motor_cmd[motor_idx].tau = 0
+            # hand publisher
+            if config.msg_type != "adam_lite":
+                for i in range(12):
+                    self.hand_cmd.position[i] = self.close_hand[i]
+                self.hand_pub.Write(self.hand_cmd)
+            
             self.send_cmd(self.low_cmd)
             time.sleep(self.config.control_dt)
 
     def run(self):
+
+        # hand publisher
+        if config.msg_type != "adam_lite":
+            for i in range(12):
+                self.hand_cmd.position[i] = self.close_hand[i]
+            self.hand_pub.Write(self.hand_cmd)
+            
         self.counter += 1
         # Get the current joint position and velocity
         for i in range(len(self.config.leg_joint2motor_idx)):
@@ -134,7 +164,8 @@ class Controller:
             self.dqj[i] = self.low_state.motor_state[self.config.leg_joint2motor_idx[i]].dq
 
         # imu_state quaternion: w, x, y, z
-        quat = self.low_state.imu_state.quaternion
+        # quat = self.low_state.imu_state.quaternion
+        quat = ypr_to_quaternion(self.low_state.imu_state.ypr[0],self.low_state.imu_state.ypr[1],self.low_state.imu_state.ypr[2])
         ang_vel = np.array([self.low_state.imu_state.gyroscope], dtype=np.float32)
 
         if self.config.imu_type == "torso":
@@ -156,9 +187,9 @@ class Controller:
         sin_phase = np.sin(2 * np.pi * phase)
         cos_phase = np.cos(2 * np.pi * phase)
 
-        self.cmd[0] = self.remote_controller.ly
-        self.cmd[1] = self.remote_controller.lx * -1
-        self.cmd[2] = self.remote_controller.rx * -1
+        self.cmd[0] = self.remote_controller.get_walk_x_direction_speed()
+        self.cmd[1] = self.remote_controller.get_walk_y_direction_speed()
+        self.cmd[2] = self.remote_controller.get_walk_yaw_direction_speed()
 
         num_actions = self.config.num_actions
         self.obs[:3] = ang_vel
@@ -173,7 +204,7 @@ class Controller:
         # Get the action from the policy network
         obs_tensor = torch.from_numpy(self.obs).unsqueeze(0)
         self.action = self.policy(obs_tensor).detach().numpy().squeeze()
-        
+            
         # transform action to target_dof_pos
         target_dof_pos = self.config.default_angles + self.action * self.config.action_scale
 
@@ -195,6 +226,8 @@ class Controller:
             self.low_cmd.motor_cmd[motor_idx].tau = 0
 
         # send the command
+        self.low_cmd.motor_cmd[5].q = self.low_state.motor_state[5].q  # keep ankle motor position
+        self.low_cmd.motor_cmd[11].q = self.low_state.motor_state[11].q  # keep ankle motor position
         self.send_cmd(self.low_cmd)
 
         time.sleep(self.config.control_dt)
@@ -213,7 +246,7 @@ if __name__ == "__main__":
     config = Config(config_path)
 
     # Initialize DDS communication
-    ChannelFactoryInitialize(0, args.net)
+    ChannelFactoryInitialize(1, args.net)
 
     controller = Controller(config)
 
@@ -230,7 +263,7 @@ if __name__ == "__main__":
         try:
             controller.run()
             # Press the select key to exit
-            if controller.remote_controller.button[KeyMap.select] == 1:
+            if controller.remote_controller.button[KeyMap.B] == 1:
                 break
         except KeyboardInterrupt:
             break
