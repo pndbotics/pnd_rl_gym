@@ -1,5 +1,5 @@
 # Adam Lite 12DOF MuJoCo Deployment Configuration
-policy_path: "{LEGGED_GYM_ROOT_DIR}/deploy/pre_train/adam_lite_12dof/policy_lstm_1.pt"
+policy_path: "{LEGGED_GYM_ROOT_DIR}/deploy/pre_train/adam_lite_12dof/base.pt"
 xml_path: "{LEGGED_GYM_ROOT_DIR}/resources/robots/adam_lite/scene_12dof.xml"
 
 # Total simulation time
