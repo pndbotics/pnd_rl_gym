@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+import math
 
 
 def get_gravity_orientation(quaternion):
@@ -16,6 +17,28 @@ def get_gravity_orientation(quaternion):
 
     return gravity_orientation
 
+def ypr_to_quaternion(yaw, pitch, roll):
+    """
+    Convert yaw-pitch-roll (ZYX) to quaternion.
+    yaw   : rotation around Z axis (rad)
+    pitch : rotation around Y axis (rad)
+    roll  : rotation around X axis (rad)
+    return: (w, x, y, z)
+    """
+
+    cy = math.cos(yaw * 0.5)
+    sy = math.sin(yaw * 0.5)
+    cp = math.cos(pitch * 0.5)
+    sp = math.sin(pitch * 0.5)
+    cr = math.cos(roll * 0.5)
+    sr = math.sin(roll * 0.5)
+
+    w = cr * cp * cy + sr * sp * sy
+    x = sr * cp * cy - cr * sp * sy
+    y = cr * sp * cy + sr * cp * sy
+    z = cr * cp * sy - sr * sp * cy
+
+    return w, x, y, z
 
 def transform_imu_data(waist_yaw, waist_yaw_omega, imu_quat, imu_omega):
     RzWaist = R.from_euler("z", waist_yaw).as_matrix()
