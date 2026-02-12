@@ -168,3 +168,5 @@ wandb/
 IsaacGym_Preview_4_Package/
 IsaacGym_Preview_3_Package/
 isaacgym/
+deploy/deploy_real/cpp_adam/yaml-cpp/
+deploy/deploy_real/cpp_adam/libtorch/

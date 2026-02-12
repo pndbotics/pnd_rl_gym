@@ -12,6 +12,6 @@ int main(int argc, char **argv)
 	controller.zero_torque_state();
 	controller.move_to_default_pos();
 	controller.run();
-	controller.damp();
+	// controller.damp();
 	return 0;
 }
