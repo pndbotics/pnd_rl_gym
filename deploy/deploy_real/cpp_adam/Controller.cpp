@@ -58,7 +58,7 @@ void Controller::zero_torque_state()
 	auto next_cycle = std::chrono::steady_clock::now();
 
 	std::cout << "zero_torque_state, press start\n";
-	while (!joy.btn.components.start)
+	while (!joystick.button[KeyMap::start])
 	{
 		auto low_cmd = std::make_shared<pnd_adam::msg::dds_::LowCmd_>(0, std::vector<pnd_adam::msg::dds_::MotorCmd_>(23), 0);
 
@@ -74,7 +74,6 @@ void Controller::zero_torque_state()
 		mLowCmdBuf.SetDataPtr(low_cmd);
 		next_cycle += cycle_time;
 		std::this_thread::sleep_until(next_cycle);
-		break;
 	}
 }
 
@@ -94,8 +93,7 @@ void Controller::move_to_default_pos()
 	int num_steps = 100;
 	int count = 0;
 
-	// while (count <= num_steps || !joy.btn.components.A) 
-	while (count <= num_steps) 
+	while (count <= num_steps || !joystick.button[KeyMap::A]) 
 	{
 		auto low_cmd = std::make_shared<pnd_adam::msg::dds_::LowCmd_>(0, std::vector<pnd_adam::msg::dds_::MotorCmd_>(23), 0);
 		float phase = std::clamp<float>(float(count++) / num_steps, 0, 1);
@@ -108,7 +106,6 @@ void Controller::move_to_default_pos()
 			low_cmd->motor_cmd()[i].kd() = kds[i];
 			low_cmd->motor_cmd()[i].tau() = 0.0;
 			low_cmd->motor_cmd()[i].dq() = 0.0;
-			std::cout << low_cmd->motor_cmd()[i].q()<< std::endl;
 		}
 
 		// waist arm
@@ -125,7 +122,6 @@ void Controller::move_to_default_pos()
 
 		next_cycle += cycle_time;
 		std::this_thread::sleep_until(next_cycle);
-		// break;
 	}
 }
 
@@ -139,7 +135,7 @@ void Controller::run()
 	float period = .8;
 	float time = 0;
 
-	while (!joy.btn.components.select)
+	while (!joystick.button[KeyMap::B])
 	{
 		auto low_state = mLowStateBuf.GetDataPtr();
 		// obs
@@ -156,9 +152,9 @@ void Controller::run()
 			break;
 		}
 
-		obs(6) = joy.ly * max_cmd[0] * cmd_scale[0];
-		obs(7) = joy.lx * -1 * max_cmd[1] * cmd_scale[1];
-		obs(8) = joy.rx * -1 * max_cmd[2] * cmd_scale[2];
+		obs(6) = joystick.get_walk_x_direction_speed() * max_cmd[0] * cmd_scale[0];
+		obs(7) = joystick.get_walk_y_direction_speed() * max_cmd[1] * cmd_scale[1];
+		obs(8) = joystick.get_walk_yaw_direction_speed() * max_cmd[2] * cmd_scale[2];
 
 		for (int i = 0; i < 12; i++)
 		{
@@ -236,7 +232,7 @@ void Controller::low_state_message_handler(const void *message)
 {
 	pnd_adam::msg::dds_::LowState_* ptr = (pnd_adam::msg::dds_::LowState_*)message;
 	mLowStateBuf.SetData(*ptr);
-	std::memcpy(&joy, ptr->wireless_remote().data(), ptr->wireless_remote().size() * sizeof(uint8_t));
+	joystick.set(ptr->wireless_remote());
 }
 
 void Controller::low_cmd_write_handler()

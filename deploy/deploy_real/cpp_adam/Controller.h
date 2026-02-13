@@ -15,6 +15,7 @@
 #include "DataBuffer.h"
 #include <string>
 
+#include "remote_controller.hpp"
 class Controller
 {
 	public:
@@ -37,8 +38,8 @@ class Controller
 		unitree::robot::ChannelSubscriberPtr<pnd_adam::msg::dds_::LowState_> lowstate_subscriber;
 
 		// joystick
-		xRockerBtnDataStruct joy;
-
+		// xRockerBtnDataStruct joy;
+		RemoteController joystick;
 		// yaml config
 		std::vector<float> leg_joint2motor_idx;
 		std::vector<float> kps;
