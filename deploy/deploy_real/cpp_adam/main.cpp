@@ -1,5 +1,6 @@
 #include <iostream>
-#include "Controller.h"
+#include "lite_run.h"
+// #include "Controller.h"
 
 int main(int argc, char **argv)
 {
